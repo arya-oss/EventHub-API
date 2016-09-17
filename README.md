@@ -200,4 +200,40 @@ Date: Sat, 17 Sep 2016 08:31:11 GMT
 
 ```
 
+#### To join an Event
+
+```
+$ curl -u rest_user:s3cr3t -i -X POST http://localhost:5000/api/v1/join/1
+
+HTTP/1.0 200 OK
+Content-Type: application/json
+Content-Length: 110
+Server: Werkzeug/0.11.11 Python/2.7.12
+Date: Sat, 17 Sep 2016 08:31:11 GMT
+
+{
+  "status":"success",
+  "message":"Successfully Joined"
+}
+```
+#### To get users going for a event
+
+```
+$ curl -u rest_user:s3cr3t -i -X POST http://localhost:5000/api/v1/going/1
+
+HTTP/1.0 200 OK
+Content-Type: application/json
+Content-Length: 110
+Server: Werkzeug/0.11.11 Python/2.7.12
+Date: Sat, 17 Sep 2016 08:31:11 GMT
+
+{
+  "status":"success",
+  "count": 1,
+  "users": [
+    "Rajmani Arya"
+  ]
+}
+```
+
 ### More updates coming soon

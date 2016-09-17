@@ -56,8 +56,8 @@ class User(db.Model):
     def full_name(self):
         return self.first_name + ' ' + self.last_name
 
-    def __repr__(self):
-        print '<User %r>' % self.username
+    def __str__(self):
+        return '<User %s>' % self.username
 
 class Feedback(db.Model):
     __tablename__='feedback'
@@ -71,8 +71,8 @@ class Feedback(db.Model):
         self.stars = stars
         self.comment = comment
 
-    def __repr__(self):
-        print '<Feedback %r>'%self.comment
+    def __str__(self):
+        print '<Feedback %s>'%self.comment
 
 event_user = db.Table('event_user',
     db.Column('event_id', db.Integer, db.ForeignKey('event._id')),
@@ -112,11 +112,12 @@ class Event(db.Model):
             'logo_url': self.logo_url, 
             'requirements': self.requirements,
             'contact' : self.contact,
-            'contact_alt' : self.contact_alt
+            'contact_alt' : self.contact_alt,
+            'going': len(self.event_user)
         }
 
-    def __repr__(self):
-        print '<Event %r>'%self.title
+    def __str__(self):
+        print '<Event %s>'%self.title
 
 def custom_error(status_code, err_msg):
     response = {
@@ -270,6 +271,32 @@ def create_admin(_id):
     db.session.commit()
     print user.username, ' made admin by ', g.user.username
     return jsonify({"status":"success", "message":"new admin created"})
+
+@app.route('/api/v1/join/<int:_id>', methods=['POST'])
+@auth.login_required
+def join_event(_id):
+    event = Event.query.get(_id)
+    if event is None:
+        return custom_error(404, "Event not found !")
+    event.event_user.append(g.user)
+    db.session.commit()
+    print user, 'joined', event
+    return jsonify({"status":"success", "message":"Successfully Joined"})
+
+@app.route('/api/v1/going/<int:_id>', methods=['GET'])
+@auth.login_required
+def going_user(_id):
+    event = Event.query.get(_id)
+    if event is None:
+        return custom_error(404, "Event not found !")
+    
+    response = {"status":"success", "count": len(event_user), "users": []}
+
+    for user in event.event_user:
+        response["users"].append(user.full_name())
+
+    return jsonify(response)
+
 
 if __name__=='__main__':
     if not os.path.exists('db.sqlite3'):
