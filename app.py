@@ -28,7 +28,6 @@ auth = HTTPBasicAuth()
 migrate = Migrate(app, db)
 
 class User(db.Model):
-
     __tablename__ = 'user'
     _id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(32), index=True, unique=True)
@@ -38,6 +37,7 @@ class User(db.Model):
     email = db.Column(db.String(32), unique=True)
     phone = db.Column(db.String(13))
     date_joined = db.Column(db.DateTime, default=datetime.utcnow)
+    is_admin = db.Column(db.Boolean, default=0)
     feedback = db.relationship('Feedback', backref='User', uselist=False)
 
     def __init__(self, username, first_name, email, last_name, phone):
@@ -157,6 +157,11 @@ def new_user():
     user = User(username, first_name, email, last_name, phone)
     user.hash_password(password)
 
+    # First user is always Admin
+    u = User.query.all()
+    if u is None or len(u) == 0:
+        user.is_admin = True
+
     db.session.add(user)
     db.session.commit()
 
@@ -167,7 +172,7 @@ def get_user(_id):
     user = User.query.get(_id)
     if not user:
         custom_error(404, 'User not found')
-    return jsonify({'full_name': user.full_name(), 'email': user.email})
+    return jsonify({'full_name': user.full_name(), 'email': user.email, 'phone': user.phone})
 
 @app.route('/api/v1/users', methods=['GET'])
 @auth.login_required
@@ -178,7 +183,7 @@ def get_all_user():
     else:
         res = {'status':'success', 'count': len(users), 'users': []}
         for user in users:
-            res['users'].append({'_id': user._id,'full_name': user.full_name(), 'email': user.email})
+            res['users'].append({'_id': user._id,'full_name': user.full_name(), 'email': user.email, 'phone': user.phone})
 
         return jsonify(res)
 
@@ -229,6 +234,42 @@ def get_all_event():
         response['events'].append(event.to_json())
     return jsonify(response)
 
+@app.route('/api/v1/events', methods=['POST'])
+@auth.login_required
+def create_event():
+    if g.user.is_admin == False:
+        return custom_error(400, 'You are not an admin')
+    title = str(request.json.get('title'))
+    location = str(request.json.get('location'))
+    schedule = datetime.strptime(str(request.json.get('schedule')), '%Y-%m-%d %H:%M:%S')
+    logo_url = str(request.json.get('logo_url'))
+    contact = str(request.json.get('contact'))
+    contact_alt = str(request.json.get('contact_alt'))
+    requirements = str(request.json.get('requirements'))
+    refreshment = int(request.json.get('refreshment'))
+    event = Event(title, location, schedule, contact)
+    event.logo_url = logo_url
+    event.contact_alt = contact_alt
+    event.requirements = requirements
+    event.refreshment = refreshment
+    db.session.add(event)
+    db.session.commit()
+
+    return (jsonify({'title': event.title}), 201, {'Location': url_for('get_event', _id=event._id, _external=True)})
+
+@app.route('/api/v1/admin/<int:_id>', methods=['PUT'])
+@auth.login_required
+def create_admin(_id):
+    if g.user.is_admin is None or g.user.is_admin == False:
+        return custom_error(400, 'You are not an admin')
+    user = User.query.get(_id)
+    if user is None:
+        return custom_error(404, 'User not found')
+    
+    user.is_admin = True
+    db.session.commit()
+    print user.username, ' made admin by ', g.user.username
+    return jsonify({"status":"success", "message":"new admin created"})
 
 if __name__=='__main__':
     if not os.path.exists('db.sqlite3'):
