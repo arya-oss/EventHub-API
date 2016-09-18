@@ -57,7 +57,7 @@ class User(db.Model):
         return self.first_name + ' ' + self.last_name
 
     def __str__(self):
-        return '<User %s>' % self.username
+        return '<User: %s>' % str(self.username)
 
 class Feedback(db.Model):
     __tablename__='feedback'
@@ -72,7 +72,7 @@ class Feedback(db.Model):
         self.comment = comment
 
     def __str__(self):
-        print '<Feedback %s>'%self.comment
+        return '<Feedback: %s>' % str(self.comment)
 
 event_user = db.Table('event_user',
     db.Column('event_id', db.Integer, db.ForeignKey('event._id')),
@@ -117,7 +117,7 @@ class Event(db.Model):
         }
 
     def __str__(self):
-        print '<Event %s>'%self.title
+        return '<Event: %s>' % str(self.title)
 
 def custom_error(status_code, err_msg):
     response = {
@@ -280,7 +280,6 @@ def join_event(_id):
         return custom_error(404, "Event not found !")
     event.event_user.append(g.user)
     db.session.commit()
-    print user, 'joined', event
     return jsonify({"status":"success", "message":"Successfully Joined"})
 
 @app.route('/api/v1/going/<int:_id>', methods=['GET'])
@@ -289,19 +288,14 @@ def going_user(_id):
     event = Event.query.get(_id)
     if event is None:
         return custom_error(404, "Event not found !")
-    
-    response = {"status":"success", "count": len(event_user), "users": []}
-
+    response = {"status":"success", "count": len(event.event_user), "users": []}
     for user in event.event_user:
         response["users"].append(user.full_name())
-
     return jsonify(response)
-
 
 if __name__=='__main__':
     if not os.path.exists('db.sqlite3'):
         db.create_all()
 
     app.run(debug=True)
-
 
